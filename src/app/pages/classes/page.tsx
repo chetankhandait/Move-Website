@@ -1,5 +1,5 @@
 // src/app/classes/page.tsx
-'use client'
+'use client';
 import React, { useEffect, useState } from 'react';
 import { Class } from '@/app/types';
 import { supabase } from '@/app/libs/supabaseClient';
@@ -16,6 +16,9 @@ const ClassesPage: React.FC = () => {
       if (data) {
         setClasses(data);
       }
+      if (error) {
+        console.error('Error fetching classes:', error.message);
+      }
       setLoading(false);
     };
     
@@ -30,7 +33,13 @@ const ClassesPage: React.FC = () => {
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {classes.map((classData) => (
-            <ClassCard key={classData.id} classData={classData} />
+            <ClassCard 
+              key={classData.id} 
+              teacher={classData.teacherName} 
+              danceForm={classData.danceForm} 
+              timing={classData.timing} 
+              date={classData.date} 
+            />
           ))}
         </div>
       )}
