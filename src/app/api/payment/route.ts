@@ -1,5 +1,5 @@
 // src/app/api/payment/route.ts
-import razorpay from '@/app/libs/razorpayConfig';
+ import razorpay from '@/app/libs/razorpayConfig';
 import { NextResponse } from 'next/server';
  
 interface CreateOrderRequest {
