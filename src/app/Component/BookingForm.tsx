@@ -1,4 +1,6 @@
 // src/components/BookingForm.js
+'use client'
+
 import React, { useState } from 'react';
 
 const BookingForm = ({ onSubmit }) => {
