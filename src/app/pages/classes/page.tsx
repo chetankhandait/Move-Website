@@ -12,16 +12,26 @@ const ClassesPage: React.FC = () => {
   useEffect(() => {
     const fetchClasses = async () => {
       setLoading(true);
-      const { data, error } = await supabase.from<Class>('Classes').select('*');
-      if (data) {
-        setClasses(data);
-      }
+      const { data, error } = await supabase
+        .from('Classes')
+        .select('*');
+
       if (error) {
         console.error('Error fetching classes:', error.message);
+        setLoading(false);
+        return;
       }
+
+      if (data && Array.isArray(data)) {
+        // Type assertion to ensure 'data' matches the expected structure
+        setClasses(data as Class[]);
+      } else {
+        console.warn('Unexpected data format:', data);
+      }
+
       setLoading(false);
     };
-    
+
     fetchClasses();
   }, []);
 
