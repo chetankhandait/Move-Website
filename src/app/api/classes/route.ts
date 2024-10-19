@@ -1,38 +1,38 @@
-// // src/app/api/classes/route.ts
+// src/app/api/classes/route.ts
 
-// import { supabase } from "@/app/libs/supabaseClient";
+import { supabase } from "@/app/libs/supabaseClient";
 
  
-// interface DanceClass {
-//   teacher: string;
-//   danceForm: string;
-//   timing: string;
-//   date: string;
-// }
+interface DanceClass {
+  teacher: string;
+  danceForm: string;
+  timing: string;
+  date: string;
+}
 
-// export async function GET(): Promise<Response> {
-//   const { data, error } = await supabase.from('Classes').select('*');
+export async function GET(): Promise<Response> {
+  const { data, error } = await supabase.from('Classes').select('*');
   
-//   if (error) {
-//     return new Response(JSON.stringify({ error: error.message }), {
-//       status: 500,
-//     });
-//   }
+  if (error) {
+    return new Response(JSON.stringify({ error: error.message }), {
+      status: 500,
+    });
+  }
   
-//   return new Response(JSON.stringify(data), { status: 200 });
-// }
+  return new Response(JSON.stringify(data), { status: 200 });
+}
 
-// export async function POST(request: Request): Promise<Response> {
-//   const body: DanceClass = await request.json();
-//   const { teacher, danceForm, timing, date } = body;
+export async function POST(request: Request): Promise<Response> {
+  const body: DanceClass = await request.json();
+  const { teacher, danceForm, timing, date } = body;
   
-//   const { data, error } = await supabase.from('Classes').insert([{ teacher, danceForm, timing, date }]);
+  const { data, error } = await supabase.from('Classes').insert([{ teacher, danceForm, timing, date }]);
   
-//   if (error) {
-//     return new Response(JSON.stringify({ error: error.message }), {
-//       status: 500,
-//     });
-//   }
+  if (error) {
+    return new Response(JSON.stringify({ error: error.message }), {
+      status: 500,
+    });
+  }
   
-//   return new Response(JSON.stringify(data), { status: 201 });
-// }
+  return new Response(JSON.stringify(data), { status: 201 });
+}
