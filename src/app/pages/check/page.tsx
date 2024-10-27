@@ -4,8 +4,15 @@ import { useRouter } from 'next/navigation';
 import { supabase } from '@/app/libs/supabase';
 import { useForm } from 'react-hook-form';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { PaymentFormData, PlanDetails, } from '@/app/types';
+import { PaymentFormData, PlanDetails } from '@/app/types';
+import Link from 'next/link';
 
+// Define status types to match database constraints
+const ORDER_STATUS = {
+  PENDING: 'pending',
+  SUCCESS: 'completed',
+  FAILED: 'failed'
+} as const;
 
 export default function PaymentPage() {
   const router = useRouter();
@@ -13,9 +20,11 @@ export default function PaymentPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [razorpayLoaded, setRazorpayLoaded] = useState(false);
-
-  // Initialize useForm
+  const [orderId, setOrderId] = useState<string | null>(null);
+  console.log(selectedPlan)
   const { register, handleSubmit, setValue, getValues, formState: { errors } } = useForm<PaymentFormData>();
+
+  // ... (keep the useEffect and loadRazorpay functions the same)
 
   useEffect(() => {
     const loadRazorpay = async () => {
@@ -23,16 +32,13 @@ export default function PaymentPage() {
         const script = document.createElement('script');
         script.src = 'https://checkout.razorpay.com/v1/checkout.js';
         script.async = true;
-
         script.onload = () => {
           setRazorpayLoaded(true);
           resolve();
         };
-
         script.onerror = () => {
           reject(new Error('Failed to load Razorpay SDK'));
         };
-
         document.body.appendChild(script);
       });
     };
@@ -40,13 +46,11 @@ export default function PaymentPage() {
     const initializePage = async () => {
       try {
         await loadRazorpay();
-
         const planData = localStorage.getItem('selectedPlan');
         if (!planData) {
           router.push('/plans');
           return;
         }
-
         const plan: PlanDetails = JSON.parse(planData);
         setSelectedPlan(plan);
         setValue('totalAmount', plan.price.toString());
@@ -58,36 +62,60 @@ export default function PaymentPage() {
 
     initializePage();
   }, [router, setValue]);
-
-  const addPaymentToDatabase = async (status: string, paymentId: string | null, amount: number) => {
+  
+  const createOrder = async (formData: PaymentFormData) => {
     try {
-      const { data, error } = await supabase.from('order').insert([
-        {
-          uuid: crypto.randomUUID(), // Generate a UUID for the new order
-          plan_id: selectedPlan?.id, // Assuming selectedPlan.id is the UUID of the plan
-          amount: amount,
-          status: status,
-          payment_id: paymentId,
-          customer_details: {
-            first_name: getValues('fname'),
-            last_name: getValues('lname'),
-            email: getValues('email'),
-            mobile: getValues('mobile'),
-            address: getValues('address'),
-            country: getValues('country'),
-            city: getValues('city'),
-            state: getValues('state'),
-            pincode: getValues('pincode')
-          }
+      const newOrder = {
+        plan_id: selectedPlan?.id,
+        amount: parseInt(formData.totalAmount),
+        status: ORDER_STATUS.PENDING, // Using predefined status
+        payment_id: null,
+        customer_details: {
+          first_name: formData.fname,
+          last_name: formData.lname,
+          email: formData.email,
+          mobile: formData.mobile,
+          address: formData.address,
+          country: formData.country,
+          city: formData.city,
+          state: formData.state,
+          pincode: formData.pincode
         }
-      ]);
+      };
+
+      const { data, error } = await supabase
+        .from('orders')
+        .insert([newOrder])
+        .select();
 
       if (error) throw error;
-
-      console.log('Payment added to database:', data);
+      
+      if (data && data[0]) {
+        setOrderId(data[0].id);
+        return data[0].id;
+      } else {
+        throw new Error('No data returned from order creation');
+      }
     } catch (err) {
-      console.error('Failed to add payment to database:', err);
-      setError('Failed to record payment. Please try again later.');
+      console.error('Failed to create order:', err);
+      throw new Error('Failed to create order in database');
+    }
+  };
+
+  const updateOrderStatus = async (orderId: string, status: typeof ORDER_STATUS[keyof typeof ORDER_STATUS], paymentId: string | null) => {
+    try {
+      const { error } = await supabase
+        .from('orders')
+        .update({ 
+          status: status,
+          payment_id: paymentId,
+        })
+        .eq('id', orderId);
+
+      if (error) throw error;
+    } catch (err) {
+      console.error('Failed to update order status:', err);
+      throw new Error('Failed to update order status');
     }
   };
 
@@ -106,45 +134,68 @@ export default function PaymentPage() {
 
     setLoading(true);
 
-    const options = {
-      key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID,
-      amount: parseInt(selectedPlan?.price) * 100,
-      currency: 'INR',
-      name: 'Move the dance Space',
-      description: 'Plan Payment',
-      handler: async function (response: any) {
-        const paymentId = response.razorpay_payment_id;
-        await addPaymentToDatabase('Completed', paymentId, parseInt(data.totalAmount));
-
-        // Reset form values
-        Object.keys(data).forEach(key => setValue(key, ''));
-        alert('Payment Successful! Payment ID: ' + paymentId);
-      },
-      prefill: {
-        name: `${data.fname} ${data.lname}`,
-        email: data.email,
-        contact: data.mobile,
-      },
-      theme: {
-        color: '#07a291db',
-      },
-    };
-
     try {
-      await addPaymentToDatabase('Initiated', null, parseInt(data.totalAmount));
+      // Create initial order in Supabase
+      const orderId = await createOrder(data);
+
+      const options = {
+        key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID,
+        amount: parseInt(selectedPlan?.price) * 100,
+        currency: 'INR',
+        name: 'Move the dance Space',
+        description: 'Plan Payment',
+        handler: async function (response: any) {
+          try {
+            const paymentId = response.razorpay_payment_id;
+            // Update order status to success
+            await updateOrderStatus(orderId, ORDER_STATUS.SUCCESS, paymentId);
+            
+            // Reset form values
+            Object.keys(data).forEach(key => setValue(key, ''));
+            alert('Payment Successful! Payment ID: ' + paymentId);
+          } catch (err) {
+            console.error('Error updating order after payment:', err);
+            setError('Payment successful but failed to update order status. Please contact support.');
+          }
+        },
+        prefill: {
+          name: `${data.fname} ${data.lname}`,
+          email: data.email,
+          contact: data.mobile,
+        },
+        theme: {
+          color: '#07a291db',
+        },
+        modal: {
+          ondismiss: async function() {
+            // Update order status to failed if payment modal is dismissed
+            if (orderId) {
+              await updateOrderStatus(orderId, ORDER_STATUS.FAILED, null);
+            }
+          }
+        }
+      };
+
       const paymentObject = new (window as any).Razorpay(options);
       paymentObject.open();
-    } catch (error) {
-      console.error('Payment initiation failed:', error);
+    } catch (err) {
+      console.error('Payment process failed:', err);
+      setError('Failed to process payment. Please try again.');
     } finally {
       setLoading(false);
     }
   };
-
-  return (
+  return(
     <div className="container mx-auto px-4 py-8">
       <div className="max-w-2xl mx-auto mb-8 bg-teal-50 rounded-lg p-6">
         <h2 className="text-xl font-semibold text-teal-800 mb-4">Selected Plan</h2>
+        <Link href={'/pages/plans'}>
+        
+        <button>
+          go back to plan 
+
+        </button>
+        </Link>
         {selectedPlan && (
           <div className="flex justify-between items-center">
             <div>
@@ -165,7 +216,6 @@ export default function PaymentPage() {
           </Alert>
         )}
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-          {/* Form Fields */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <input {...register('fname', { required: true })} placeholder="First Name" className="w-full px-4 py-2 border rounded-md" />
             <input {...register('lname', { required: true })} placeholder="Last Name" className="w-full px-4 py-2 border rounded-md" />
@@ -192,5 +242,7 @@ export default function PaymentPage() {
         </form>
       </div>
     </div>
-  );
+  )
+
+  // ... (keep the return JSX the same)
 }
