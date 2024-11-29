@@ -2,13 +2,11 @@
 'use client'
 import React, { useEffect, useState } from 'react';
 import { Class } from '@/app/types';
-import { supabase } from '@/app/libs/supabaseClient';
-import ClassCard from '@/app/Component/ClassCard';
-
-const ClassesPage: React.FC = () => {
+ import ClassCard from '@/app/Component/ClassCard';
+import { supabase } from '@/app/libs/supabase';
+ const ClassesPage: React.FC = () => {
   const [classes, setClasses] = useState<Class[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
-
   useEffect(() => {
     const fetchClasses = async () => {
       setLoading(true);
@@ -21,7 +19,6 @@ const ClassesPage: React.FC = () => {
     
     fetchClasses();
   }, []);
-
   return (
     <div className="container mx-auto p-4">
       <h1 className="text-2xl font-bold mb-4">Available Dance Classes</h1>
@@ -37,5 +34,4 @@ const ClassesPage: React.FC = () => {
     </div>
   );
 };
-
 export default ClassesPage;

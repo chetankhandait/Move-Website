@@ -1,7 +1,14 @@
-// src/components/ClassCard.js
+// src/components/ClassCard.tsx
 import React from 'react';
 
-const ClassCard = ({ teacher, danceForm, timing, date }) => {
+interface ClassCardProps {
+  teacher: string;
+  danceForm: string;
+  timing: string;
+  date: string;
+}
+
+const ClassCard: React.FC<ClassCardProps> = ({ teacher, danceForm, timing, date }) => {
   return (
     <div className="class-card border p-4 rounded-lg shadow-md">
       <h3 className="text-xl font-semibold">{danceForm}</h3>

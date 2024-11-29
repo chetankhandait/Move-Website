@@ -1,9 +1,20 @@
-// src/components/BookingForm.js
-'use client'
+// src/components/BookingForm.tsx
+'use client';
 
 import React, { useState } from 'react';
 
-const BookingForm = ({ onSubmit }) => {
+interface BookingFormProps {
+  onSubmit: (formData: {
+    name: string;
+    email: string;
+    phone: string;
+    courseName: string;
+    startDate: string;
+    endDate: string;
+  }) => void;
+}
+
+const BookingForm: React.FC<BookingFormProps> = ({ onSubmit }) => {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
@@ -11,7 +22,7 @@ const BookingForm = ({ onSubmit }) => {
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
 
-  const handleSubmit = (e) => {
+  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     onSubmit({ name, email, phone, courseName, startDate, endDate });
   };

@@ -8,7 +8,37 @@ export interface Class {
     timing: string;
     date: string;
   }
-  
+  // types/index.ts
+export interface PlanDetails {
+  id: string;  // This will store the UUID
+  name: string;
+  description: string;
+  price: number;
+  duration: string;
+}
+
+
+ export interface PlanDetails {
+  id: string;
+  name: string;
+  description: string;
+  price: number;
+  duration: string;
+  created_at: string;
+}
+ 
+export interface PaymentFormData {
+  fname: string;
+  lname: string;
+  email: string;
+  mobile: string;
+  address: string;
+  country: string;
+  city: string;
+  state: string;
+  pincode: string;
+  totalAmount: string;
+}
   // Type for a Booking
   export interface Booking {
     id: number;

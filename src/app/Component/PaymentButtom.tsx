@@ -51,7 +51,7 @@ const PaymentButton: React.FC<PaymentButtonProps> = ({ amount, onSuccess, onErro
       const { orderId } = await response.json();
 
       const options = {
-        key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID,
+        key: process.env.RAZORPAY_KEY_ID,
         amount: amount * 100,
         currency: 'INR',
         name: 'Dance Classes',
